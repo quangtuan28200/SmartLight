@@ -6,7 +6,8 @@
 #include <BlynkSimpleShieldEsp8266.h>
 
 //Mã Auth Token 
-char auth[] = "YzJUjIJYR9_JsI-mlhccFFuP900d0772";
+//char auth[] = "YzJUjIJYR9_JsI-mlhccFFuP900d0772";
+char auth[] = "lmRBRkoxenzg6XyUfE_rqsr8AMssyciz";
 //Tên Wifi kết nối
 char ssid[] = "Tran Thap";
 //Mật khẩu
@@ -24,11 +25,13 @@ int btn1 = A1;
 int btn2 = A2;
 int btn3 = A3;
 int pir = 2;      
-int ldr = 3;
+int ldr = A0;
 
 // Các biến chuyển chế độ
 int flag;
 int flag1;
+int delaypir = 5000;
+int muctoi = 500;
 
 // Khai báo đối tượng để sử dụng LCD và timer
 WidgetLCD lcd(V0);
@@ -42,7 +45,8 @@ void setup()
   // Set ESP8266 baud rate
   Serial.begin(ESP8266_BAUD);
   delay(10);
-  Blynk.begin(auth, wifi, ssid, pass);
+//  Blynk.begin(auth, wifi, ssid, pass);
+  Blynk.begin(auth, wifi ,ssid, pass, "blynk-server.com", 8080);
  
   pinMode(ledCauThang, OUTPUT);
   pinMode(ledNgoaiNha, OUTPUT);
@@ -53,7 +57,9 @@ void setup()
   pinMode(btn2, INPUT);
   pinMode(btn3, INPUT);
   lcd.clear();
-
+  Blynk.virtualWrite(V6, delaypir/1000);
+  Blynk.virtualWrite(V8, delaypir/1000);
+  Blynk.virtualWrite(V9, muctoi);
   timer.setInterval(500L, sendUptime); 
 }
 
@@ -119,14 +125,53 @@ BLYNK_WRITE(V5)
   }
 }
 
+BLYNK_WRITE(V6)
+{
+  int pinData = param.asInt(); 
+  delaypir = 1000 * pinData;
+  Blynk.virtualWrite(V8, pinData);
+}
+
+BLYNK_WRITE(V9)
+{
+  int pinData = param.asInt();
+  muctoi = pinData;
+}
+
+BLYNK_WRITE(V7)
+{
+  int pinData = param.asInt(); 
+  if(flag1==1){
+    digitalWrite(ledWifi, pinData);
+    digitalWrite(ledNgoaiNha, pinData);
+    digitalWrite(ledCauThang, pinData);
+    if(pinData == 1){
+      Blynk.virtualWrite(V1, 1);
+      Blynk.virtualWrite(V2, 1);
+      Blynk.virtualWrite(V3, 1);
+    }else{
+      Blynk.virtualWrite(V1, 0);
+      Blynk.virtualWrite(V2, 0);
+      Blynk.virtualWrite(V3, 0);
+    }
+  }
+}
+
+BLYNK_WRITE(V11)
+{
+  int pinData = param.asInt();
+  
+}
+
 void sendUptime()
 {
   int pirStatus = digitalRead(pir);
-  int ldrStatus = digitalRead(ldr);
+  int ldrStatus = analogRead(ldr);
+  Blynk.virtualWrite(V10, ldrStatus);
 
   if(flag1 == 0){
     if(flag == 1){
-      if(ldrStatus == HIGH){
+      if(ldrStatus > muctoi){
         Blynk.virtualWrite(V2, 1);
         digitalWrite(ledNgoaiNha, HIGH); // LED On    
       }else{
@@ -138,7 +183,7 @@ void sendUptime()
       {
         Blynk.virtualWrite(V3, 1);
         digitalWrite(ledCauThang, HIGH); // LED On
-        delay(5000);
+        delay(delaypir);
       }else{
         Blynk.virtualWrite(V3, 0);
         digitalWrite(ledCauThang, LOW); // LED Off
